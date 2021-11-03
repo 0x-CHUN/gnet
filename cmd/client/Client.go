@@ -1,6 +1,8 @@
 package main
 
 import (
+	mynet "Samurai/net"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -14,18 +16,34 @@ func main() {
 		return
 	}
 	for {
-		_, err := conn.Write([]byte("hi"))
+		pack := mynet.NewPacket()
+		msg, _ := pack.Pack(mynet.NewMsgPacket(0, []byte("Hi!")))
+		_, err := conn.Write(msg)
 		if err != nil {
-			log.Fatalln("Write err:", err)
+			log.Println("Write error: ", err)
 			return
 		}
-		buf := make([]byte, 512)
-		cnt, err := conn.Read(buf)
+		headerData := make([]byte, pack.GetHeaderLen())
+		_, err = io.ReadFull(conn, headerData)
 		if err != nil {
-			log.Fatalln("Read err:", err)
+			log.Println("Read headerData error : ", err)
+			break
+		}
+		msgHeader, err := pack.Unpack(headerData)
+		if err != nil {
+			log.Println("Server unpack error : ", err)
 			return
 		}
-		log.Printf("Server call back : %s, cnt = %d", buf, cnt)
+		if msgHeader.GetLen() > 0 {
+			msg := msgHeader.(*mynet.Message)
+			msg.Data = make([]byte, msg.GetLen())
+			_, err := io.ReadFull(conn, msg.Data)
+			if err != nil {
+				log.Println("Server unpack data error : ", err)
+				return
+			}
+			log.Printf("==>ID=%d,Len=%d,Data=%s", msg.ID, msg.Len, string(msg.Data))
+		}
 		time.Sleep(1 * time.Second)
 	}
 }

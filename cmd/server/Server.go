@@ -9,22 +9,9 @@ type PingRouter struct {
 	net.BaseRouter
 }
 
-func (p *PingRouter) PreHandle(req net.Req) {
-	_, err := req.GetConnection().GetTCPConnection().Write([]byte("Before!"))
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
 func (p *PingRouter) Handle(req net.Req) {
-	_, err := req.GetConnection().GetTCPConnection().Write([]byte("Ping!"))
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
-func (p *PingRouter) PostHandle(req net.Req) {
-	_, err := req.GetConnection().GetTCPConnection().Write([]byte("After!"))
+	log.Printf("Receive from client : msgID=%d,data=%s\n", req.GetMsgID(), string(req.GetData()))
+	err := req.GetConnection().SendMsg(1, []byte("Ping!"))
 	if err != nil {
 		log.Fatalln(err)
 	}
