@@ -31,6 +31,9 @@ func (s *Server) Start() {
 	log.Printf("Version : %s, MaxConn : %d, MaxPacketSize : %d",
 		GlobalConfig.Version, GlobalConfig.MaxConn, GlobalConfig.MaxPacketSize)
 	go func() {
+		// start worker pool
+		s.msgHandler.StartWorkerPool()
+
 		// get a tcp addr
 		addr, err := net.ResolveTCPAddr(s.Version, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {
@@ -53,7 +56,7 @@ func (s *Server) Start() {
 		for {
 			conn, err := listener.AcceptTCP()
 			if err != nil {
-				log.Fatalln("Accept err: ", err)
+				log.Println("Accept err: ", err)
 				continue
 			}
 			// todo : set max connection

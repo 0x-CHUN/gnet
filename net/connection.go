@@ -29,7 +29,8 @@ type Connection struct {
 	ConnID     uint32
 	isClosed   bool
 	MsgHandler msgHandle
-	ExitChan   chan bool // channel for notify
+	ExitChan   chan bool   // channel for notify
+	MsgChan    chan []byte // chan for read and write goroutine
 }
 
 func NewConnection(conn *net.TCPConn, connID uint32, msgHandler msgHandle) *Connection {
@@ -39,6 +40,7 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler msgHandle) *Conn
 		isClosed:   false,
 		MsgHandler: msgHandler,
 		ExitChan:   make(chan bool, 1),
+		MsgChan:    make(chan []byte),
 	}
 }
 
@@ -74,13 +76,33 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
-		go c.MsgHandler.DoMsgHandler(&req)
+		if GlobalConfig.WorkerPoolSize > 0 {
+			c.MsgHandler.AddToQueue(&req)
+		} else {
+			go c.MsgHandler.DoMsgHandler(&req)
+		}
+	}
+}
+
+func (c *Connection) StartWriter() {
+	for {
+		select {
+		case data := <-c.MsgChan: // some data need to be sent
+			if _, err := c.Conn.Write(data); err != nil {
+				log.Println("Send data err : ", err)
+				return
+			}
+		case <-c.ExitChan:
+			return
+		}
 	}
 }
 
 func (c *Connection) Start() {
-	// read data
+	// read data goroutine
 	go c.StartReader()
+	// write data goroutine
+	go c.StartWriter()
 
 	for {
 		select {
@@ -127,10 +149,6 @@ func (c *Connection) SendMsg(msgID uint32, data []byte) error {
 		log.Printf("%d pack error\n", msgID)
 		return err
 	}
-	if _, err := c.Conn.Write(msg); err != nil {
-		log.Printf("%d write msg error", msgID)
-		c.ExitChan <- true
-		return err
-	}
+	c.MsgChan <- msg // msg to channel,and send
 	return nil
 }
