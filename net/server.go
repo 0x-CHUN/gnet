@@ -15,15 +15,15 @@ type server interface {
 	// Serve start to serve
 	Serve()
 	// AddRouter add router to server
-	AddRouter(r router)
+	AddRouter(msgID uint32, r router)
 }
 
 type Server struct {
-	Name    string
-	Version string
-	IP      string
-	Port    int
-	Router  router
+	Name       string
+	Version    string
+	IP         string
+	Port       int
+	msgHandler msgHandle
 }
 
 func (s *Server) Start() {
@@ -59,7 +59,7 @@ func (s *Server) Start() {
 			// todo : set max connection
 			// todo : handle new connection function
 
-			dealConnection := NewConnection(conn, connID, s.Router)
+			dealConnection := NewConnection(conn, connID, s.msgHandler)
 			connID++
 
 			go dealConnection.Start()
@@ -79,18 +79,18 @@ func (s *Server) Serve() {
 	}
 }
 
-func (s *Server) AddRouter(r router) {
-	s.Router = r
+func (s *Server) AddRouter(msgID uint32, r router) {
+	s.msgHandler.AddRouter(msgID, r)
 }
 
 func NewServer() server {
 	GlobalConfig.Reload()
 
 	return &Server{
-		Name:    GlobalConfig.Name,
-		Version: "tcp4",
-		IP:      GlobalConfig.Host,
-		Port:    GlobalConfig.Port,
-		Router:  nil,
+		Name:       GlobalConfig.Name,
+		Version:    "tcp4",
+		IP:         GlobalConfig.Host,
+		Port:       GlobalConfig.Port,
+		msgHandler: NewMsgHandle(),
 	}
 }

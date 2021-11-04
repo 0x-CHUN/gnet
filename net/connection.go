@@ -25,20 +25,20 @@ type connection interface {
 type HandlerFunc func(*net.TCPConn, []byte, int) error
 
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnID   uint32
-	isClosed bool
-	Router   router
-	ExitChan chan bool // channel for notify
+	Conn       *net.TCPConn
+	ConnID     uint32
+	isClosed   bool
+	MsgHandler msgHandle
+	ExitChan   chan bool // channel for notify
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, r router) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, msgHandler msgHandle) *Connection {
 	return &Connection{
-		Conn:     conn,
-		ConnID:   connID,
-		isClosed: false,
-		Router:   r,
-		ExitChan: make(chan bool, 1),
+		Conn:       conn,
+		ConnID:     connID,
+		isClosed:   false,
+		MsgHandler: msgHandler,
+		ExitChan:   make(chan bool, 1),
 	}
 }
 
@@ -74,11 +74,7 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
-		go func(req Req) {
-			c.Router.PreHandle(req)
-			c.Router.Handle(req)
-			c.Router.PostHandle(req)
-		}(&req)
+		go c.MsgHandler.DoMsgHandler(&req)
 	}
 }
 
