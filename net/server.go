@@ -16,6 +16,12 @@ type server interface {
 	Serve()
 	// AddRouter add router to server
 	AddRouter(msgID uint32, r router)
+	// GetManager get the Conn manager
+	GetManager() manager
+	SetOnStart(func(conn Conn))
+	SetOnStop(func(conn Conn))
+	CallOnStart(conn Conn)
+	CallOnStop(conn Conn)
 }
 
 type Server struct {
@@ -23,7 +29,10 @@ type Server struct {
 	Version    string
 	IP         string
 	Port       int
-	msgHandler msgHandle
+	MsgHandler msgHandle
+	Manager    manager
+	OnStart    func(conn Conn)
+	OnStop     func(conn Conn)
 }
 
 func (s *Server) Start() {
@@ -32,7 +41,7 @@ func (s *Server) Start() {
 		GlobalConfig.Version, GlobalConfig.MaxConn, GlobalConfig.MaxPacketSize)
 	go func() {
 		// start worker pool
-		s.msgHandler.StartWorkerPool()
+		s.MsgHandler.StartWorkerPool()
 
 		// get a tcp addr
 		addr, err := net.ResolveTCPAddr(s.Version, fmt.Sprintf("%s:%d", s.IP, s.Port))
@@ -59,10 +68,17 @@ func (s *Server) Start() {
 				log.Println("Accept err: ", err)
 				continue
 			}
-			// todo : set max connection
-			// todo : handle new connection function
+			// too much Conn,drop the new Conn
+			if s.Manager.Len() >= GlobalConfig.MaxConn {
+				log.Println("Too much Conn, close the Conn from ", conn.RemoteAddr())
+				err := conn.Close()
+				if err != nil {
+					log.Println("Close connection err ", err)
+				}
+				continue
+			}
 
-			dealConnection := NewConnection(conn, connID, s.msgHandler)
+			dealConnection := NewConnection(s, conn, connID, s.MsgHandler)
 			connID++
 
 			go dealConnection.Start()
@@ -71,8 +87,8 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Stop() {
+	s.Manager.Clear()
 	log.Println("Stop server ", s.Name)
-	// todo : clean the connection
 }
 
 func (s *Server) Serve() {
@@ -83,7 +99,31 @@ func (s *Server) Serve() {
 }
 
 func (s *Server) AddRouter(msgID uint32, r router) {
-	s.msgHandler.AddRouter(msgID, r)
+	s.MsgHandler.AddRouter(msgID, r)
+}
+
+func (s *Server) GetManager() manager {
+	return s.Manager
+}
+
+func (s *Server) SetOnStart(f func(conn Conn)) {
+	s.OnStart = f
+}
+
+func (s *Server) SetOnStop(f func(conn Conn)) {
+	s.OnStop = f
+}
+
+func (s *Server) CallOnStart(conn Conn) {
+	if s.OnStart != nil {
+		s.OnStart(conn)
+	}
+}
+
+func (s *Server) CallOnStop(conn Conn) {
+	if s.OnStop != nil {
+		s.OnStop(conn)
+	}
 }
 
 func NewServer() server {
@@ -94,6 +134,7 @@ func NewServer() server {
 		Version:    "tcp4",
 		IP:         GlobalConfig.Host,
 		Port:       GlobalConfig.Port,
-		msgHandler: NewMsgHandle(),
+		MsgHandler: NewMsgHandle(),
+		Manager:    NewConnManager(),
 	}
 }

@@ -17,23 +17,28 @@ func main() {
 	}
 	for {
 		pack := mynet.NewPacket()
+		// write data
 		msg, _ := pack.Pack(mynet.NewMsgPacket(0, []byte("Hi!")))
 		_, err := conn.Write(msg)
 		if err != nil {
 			log.Println("Write error: ", err)
 			return
 		}
+		// read data
 		headerData := make([]byte, pack.GetHeaderLen())
+		// read header data
 		_, err = io.ReadFull(conn, headerData)
 		if err != nil {
 			log.Println("Read headerData error : ", err)
 			break
 		}
+		// unpack the header
 		msgHeader, err := pack.Unpack(headerData)
 		if err != nil {
 			log.Println("Server unpack error : ", err)
 			return
 		}
+		// read the rest of data
 		if msgHeader.GetLen() > 0 {
 			msg := msgHeader.(*mynet.Message)
 			msg.Data = make([]byte, msg.GetLen())

@@ -1,17 +1,17 @@
 package net
 
 type Req interface {
-	GetConnection() connection
+	GetConnection() Conn
 	GetData() []byte
 	GetMsgID() uint32
 }
 
 type Request struct {
-	conn connection
+	conn Conn
 	msg  message
 }
 
-func (r *Request) GetConnection() connection {
+func (r *Request) GetConnection() Conn {
 	return r.conn
 }
 

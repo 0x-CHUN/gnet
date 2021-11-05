@@ -29,8 +29,22 @@ func (h *HelloRouter) Handle(req net.Req) {
 	}
 }
 
+func OnStart(conn net.Conn) {
+	conn.SetProperty("Admin", "Admin")
+	log.Println("On Start")
+}
+
+func OnClose(conn net.Conn) {
+	if val, err := conn.GetProperty("Admin"); err == nil {
+		log.Fatalln(val)
+	}
+	log.Println("On Close")
+}
+
 func main() {
 	s := net.NewServer()
+	s.SetOnStart(OnStart)
+	s.SetOnStop(OnClose)
 	s.AddRouter(0, &PingRouter{})
 	s.AddRouter(1, &HelloRouter{})
 	s.Serve()

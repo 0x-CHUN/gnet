@@ -15,6 +15,7 @@ type Global struct {
 	MaxConn        int
 	WorkerPoolSize uint32
 	MaxWorkTask    uint32
+	MaxBufferSize  uint32
 	ConfFilePath   string
 }
 
@@ -41,6 +42,7 @@ func init() {
 		MaxPacketSize:  4096,
 		WorkerPoolSize: 10,
 		MaxWorkTask:    1024,
+		MaxBufferSize:  1024,
 		ConfFilePath:   "config/config.json",
 	}
 	GlobalConfig.Reload()
