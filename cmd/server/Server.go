@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Samurai/net"
+	"gnet/net"
 	"log"
 )
 

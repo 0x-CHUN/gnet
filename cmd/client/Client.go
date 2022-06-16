@@ -1,7 +1,7 @@
 package main
 
 import (
-	mynet "Samurai/net"
+	gnet "gnet/net"
 	"io"
 	"log"
 	"net"
@@ -16,9 +16,9 @@ func main() {
 		return
 	}
 	for {
-		pack := mynet.NewPacket()
+		pack := gnet.NewPacket()
 		// write data
-		msg, _ := pack.Pack(mynet.NewMsgPacket(0, []byte("Hi!")))
+		msg, _ := pack.Pack(gnet.NewMsgPacket(0, []byte("Hi!")))
 		_, err := conn.Write(msg)
 		if err != nil {
 			log.Println("Write error: ", err)
@@ -40,7 +40,7 @@ func main() {
 		}
 		// read the rest of data
 		if msgHeader.GetLen() > 0 {
-			msg := msgHeader.(*mynet.Message)
+			msg := msgHeader.(*gnet.Message)
 			msg.Data = make([]byte, msg.GetLen())
 			_, err := io.ReadFull(conn, msg.Data)
 			if err != nil {

@@ -1,3 +1,3 @@
-module Samurai
+module gnet
 
 go 1.17
